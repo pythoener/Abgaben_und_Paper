@@ -1,0 +1,277 @@
+\documentclass[conference,a4paper]{IEEEtran}
+
+% HARD-LOCK margins to the CFP spec
+\usepackage[a4paper,top=18mm,bottom=25mm,left=12mm,right=12mm,heightrounded]{geometry}
+
+% Safer page breaking (avoids bottom creep into margin)
+\raggedbottom
+% \IEEEoverridecommandlockouts % not needed (no \thanks used)
+
+\usepackage{textcomp}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage[noadjust]{cite}
+
+% >>> Ensure embedded/subset fonts and Times-like text+math <<<
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext}
+\usepackage[cmintegrals]{newtxmath}
+
+% Core utilities (deduplicated)
+\usepackage{bm}
+\usepackage{array}
+\usepackage{url}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{comment}
+\usepackage[hidelinks]{hyperref}
+
+% Algorithms: use ONE package (algorithm2e) since you use \KwData, \KwResult
+\usepackage[ruled,vlined]{algorithm2e}
+% \usepackage{algorithmic} % REMOVE
+% \usepackage{lineno}      % REMOVE for camera-ready
+% \usepackage{algorithm2e} % duplicate, REMOVE
+
+%\title{Leveraging Constant-Q Transform in Lightweight Neural Network Framework Integrated with Spectral Folding for Artificial Bandwidth Extension}
+
+\title{Leveraging Constant-Q Transform in Lightweight Neural Network Framework Integrated with Spectral Folding for Artificial Bandwidth Extension}
+
+\author{%
+  \IEEEauthorblockN{Mert Can Oener}
+  \IEEEauthorblockA{\textit{Laboratory of Signal Processing}\\
+                    \textit{Aschaffenburg University of Applied Sciences}\\
+                    Aschaffenburg, Germany\\
+                    s190593@th-ab.de}
+\and
+  \IEEEauthorblockN{Murtiza Ali}
+  \IEEEauthorblockA{\textit{Electrical Department}\\
+                    \textit{Indian Institute of Technology}\\
+                    Jammu, India\\
+                    murtiza.ali@iitjammu.ac.in}
+\and
+  \IEEEauthorblockN{Louis Debes}
+  \IEEEauthorblockA{\textit{Laboratory of Signal Processing}\\
+                    \textit{Aschaffenburg University of Applied Sciences}\\
+                    Aschaffenburg, Germany\\
+                    louisdebes@web.de}
+\and
+  \IEEEauthorblockN{Abid Bashir}
+  \IEEEauthorblockA{\textit{Electrical Department}\\
+                    \textit{Indian Institute of Technology}\\
+                    Jammu, India\\
+                    aabidbashir405@gmail.com}
+\and
+  \IEEEauthorblockN{Mohammed Krini}
+  \IEEEauthorblockA{\textit{Laboratory of Signal Processing}\\
+                    \textit{Aschaffenburg University of Applied Sciences}\\
+                    Aschaffenburg, Germany\\
+                    mohammed.krini@th-ab.de}
+\and
+  \IEEEauthorblockN{Karan Nathwani}
+  \IEEEauthorblockA{\textit{Electrical Department}\\
+                    \textit{Indian Institute of Technology}\\
+                    Jammu, India\\
+                    karan.nathwani@iitjammu.ac.in}
+}
+
+\newcommand{\blue}[1]{\textcolor{blue}{#1}}
+\usepackage{comment}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+\pagestyle{empty}
+
+\begin{abstract}
+
+Artificial Bandwidth Extension (ABE) improves narrowband (NB) speech by restoring high‐frequency components crucial for intelligibility and naturalness. We introduce a method \textcolor{black}{integrating} the constant‐Q Transform (CQT) in a lightweight neural architecture \textcolor{black}{framework}. Departing from short‐time Fourier transform (STFT) pipelines, our technique exploits CQT’s logarithmic spacing and finer low‐frequency resolution to better align with human audition. During preprocessing, NB bins are extracted from wideband (WB) recordings, then stacked and masked to produce a WB‐shaped input, while targets derive from the CQT of the WB signals. A compact Multi‐Layer Perceptron (MLP), MLP\textsubscript{CQT}, is trained to estimate the full WB magnitude spectrum. Phase is recovered through spectral folding with an inverse CQT (iCQT), enabling time‐domain reconstruction. Evaluations on the TIMIT dataset show that MLP\textsubscript{CQT} outperforms \textcolor{black}{Gaussian Mixture Models (GMMs)} and STFT-based models in objective and subjective metrics, validating improvements in speech quality.
+\end{abstract} 
+
+\begin{IEEEkeywords}
+Artificial bandwidth extension, constant-Q transform, Multi-Layer Perceptron.
+\end{IEEEkeywords}
+
+
+
+\section{Introduction}
+
+Listener-perceived speech quality mainly depends on the available spectral bandwidth. When that band is wider, the utterance generally sounds clearer and more intelligible \cite{JAX20031707}. Yet, in spite of substantial progress in communication technology, much voice traffic is still conveyed through narrowband \textcolor{black}{(NB)} channels limited to 300–3400 Hz, a constraint inherited from legacy infrastructure and retained in several current services. Because higher-frequency cues that distinguish many consonants and other unvoiced sounds are omitted, NB transmission diminishes both intelligibility and the natural character of speech \cite{10.3389/fpsyg.2014.00587}. 
+
+Artificial Bandwidth Extension (ABE), also called audio super-resolution, enriches NB signals by recreating the missing high-frequency portions of speech. This enhancement raises perceived quality and provides the listener with a more natural wideband (WB) experience on the receiving end. Early ABE systems relied on statistical frameworks such as Gaussian Mixture Models (GMMs) and Hidden Markov Models (HMMs), exploiting the probabilistic link between NB cues and their high-frequency counterparts \cite{862114, 5947504,5739348}. Despite their ingenuity, these models often failed to reproduce fine spectral details and to distribute energy evenly across the spectrum, which limited the fidelity of the recovered speech \cite{7602894,8063328}. Recent deep learning ABE systems employ neural networks to transform NB speech into WB form \cite{10446439}. Waveform-based models \textcolor{black}{\cite{inproceedings_2, inproceedings_3}} retain both amplitude and phase but are computationally heavy, whereas spectral approaches \textcolor{black}{\cite{8681126, hu2020phase, 10095382}} are more efficient yet reconstruct phase only approximately, which can hurt naturalness.
+Within spectral methods, GANs paired with 1D convolutional autoencoders provide efficient, high-quality restoration \cite{8681126}. Hybrid setups that combine GAN and MelGAN show that phase strongly shapes perceived quality \cite{hu2020phase}, whereas AERO leverages complex spectrograms to deliver robust performance across different tasks \cite{10095382}. Diffusion models such as NU-Wave and NU-Wave 2 achieve superior upsampling, and the latter further improves generalization and quality \cite{inproceedings_2, inproceedings_3}.
+Although recent methods have advanced ABE, many still rely on intricate network designs, large parameter counts, and demanding training, which curtail scalability and hinder real-time deployment. Their dependence on the short-time Fourier transform (STFT) for feature extraction also brings the usual drawbacks of that analysis, including the trade-off between time and frequency resolution and the equal spacing of bins that gives high- and low-frequency regions the same emphasis.
+
+This study presents compact neural models with low parameter counts by using the constant-Q transform (CQT) \cite{brown1991calculation} to extract features from the upsampled NB speech signal. CQT maps frequencies on a nonlinear perceptual scale that mirrors human hearing and keeps fine detail in low bands such as pitch and harmonics, outperforming the evenly spaced STFT bins in that region. Earlier ABE work combined CQT features with GMMs \cite{7953218}, yet we are the first to \textcolor{black}{integrate} CQT directly inside a neural network pipeline for ABE.
+
+The remainder of this paper comprises Section II, which details the proposed framework, and Sections III and IV, which present the experimental evaluation and the conclusion, respectively.
+
+\begin{figure*}
+\vspace{-0mm}
+  \centering
+  \includegraphics[width=\linewidth,keepaspectratio]{PLOTS/Training_ISPA.png}
+  \caption{Process flow illustrating the CQT-based feature extraction pipeline for data generation.}
+  \label{fig:block_diagram_training}
+\vspace{-0mm}
+\end{figure*}
+
+\section{Proposed Framework}
+
+This section presents the CQT and explains how it is used to derive features. It also outlines the network architecture and the approach for reconstructing speech.
+
+We begin with structured preprocessing. The highest frequency bins of the NB spectrum are copied and stacked into the vacant high-frequency bins that appear after upsampling, matching the WB region. This produces a well-formed input that simplifies the network’s prediction task. The masked CQT representation is used as input, while the WB CQT acts as the label when training a Multi-Layer Perceptron (MLP). After training, the MLP maps NB features to their WB counterparts. To rebuild the WB waveform, spectral folding \cite{inproceedings5} supplies the phase needed for the inverse CQT (iCQT). 
+
+
+\subsection{Constant-Q Transform (CQT)}
+The CQT employs a bank of filters that share a common quality factor \(Q\).  
+This factor is defined as the ratio of the centre frequency \(f_k\) of the \(k\)-th bin to that bin’s bandwidth: $Q = \frac{f_k}{f_{k+1} - f_k}.$ When the centre frequencies form a geometric series, the \(k\)-th centre frequency is $f_k = f_1 \cdot 2^{\frac{k-1}{B}},$
+where \(f_1\) is the lowest centre frequency and \(B\) is the number of bins per octave, which determines the time--frequency resolution.  
+For a discrete‐time signal \(x(n)\) the CQT is defined as:
+\begin{equation}
+    X(k,n) = \sum_{j=n - \left\lfloor \frac{N_k}{2} \right\rfloor}^{n + \left\lfloor \frac{N_k}{2} \right\rfloor} x(j) a_k^*\left(j - n + \frac{N_k}{2}\right).
+\end{equation} 
+Here, $\lfloor\cdot\rfloor$ denotes the floor operator that rounds each value down to the nearest integer, \(a_k(n)\) refers to the basis functions, \(^{*}\) indicates complex conjugation, and \(N_k\) is the frequency-dependent window length. A detailed exposition of the CQT, including formal definitions of \(a_k(n)\), the iCQT, and efficient implementation techniques, is given in~\cite{velasco2011constructing}.
+
+\begin{algorithm}[t] 
+  \caption{Feature extraction using the CQT.}
+  \label{algo_cqtFeatureExtraction}
+  \small
+
+  \KwData{WB speech signal \(x_{\text{wide}}(n)\).}
+  \KwResult{Modified CQT features \(\mathbf{X}_{\text{mod}}
+  \) and labels \(\mathbf{X}_{\text{wide}.}\)}
+
+  \textbf{Step 1:} Filter \(x_{\text{wide}}(n)\) to a NB signal $x_{\text{narrow}}(n)$.
+
+  \textbf{Step 2:} Compute log-magnitude of CQT from \(x_{\text{narrow}}(n) \) as $\mathbf{X}_{\text{narrow}}\ \in \mathbb{R}^{K \times F}$ with \textcolor{black}{\(B\) = 48 bins per octave}, \(f_{\min} = 62.5\) Hz, and \(f_{\max} = 8000\) Hz.
+
+ 
+  \textbf{Step 3:} Compute-log magnitude of CQT from \(x_{\text{narrow}}(n)\) as $\mathbf{X}'_{\text{narrow}}\ \in \mathbb{R}^{K' \times F}$ with \(B=48\) bins per octave, \(f'_{\min} = 62.5\) Hz, and \(f'_{\max} = 4000\) Hz.
+   
+  \textbf{Step 4:} Select the last \(L\) frequency bins from \(\mathbf{X}'_{\text{narrow}}\), focusing on those closest to \(f'_{\max}\) as:
+  \[
+\mathbf{J} =
+\begin{bmatrix}
+X'_{\text{narrow},\, K' - L,\, 0} & \cdots & X'_{\text{narrow},\, K' - L,\, F-1} \\
+\vdots & \ddots & \vdots \\
+X'_{\text{narrow},\, K' - 1,\, 0} & \cdots & X'_{\text{narrow},\, K' - 1,\, F-1} \\
+\end{bmatrix}
+\in \mathbb{R}^{L \times F}.
+\]
+
+   \textbf{Step 5:} Stack \( \mathbf{J} \) for \( P \) times to form \( \mathbf{M} \):
+   \[
+\mathbf{M} =
+\begin{bmatrix}
+\mathbf{J} \\ \mathbf{J} \\ \vdots \\ \mathbf{J}
+\end{bmatrix}
+\in \mathbb{R}^{B \times F}.
+\]
+   where \( B = P \cdot L \), such that $(B \bmod L) =0$.
+
+    \textbf{Step 6:} Create a matrix $\mathbf{G}$, such that: 
+    $$\mathbf{G} = \left[ \begin{array}{c}
+    \mathbf{0}^{(K-B) \times F}\\
+    \mathbf{M}^{B \times F} \\
+    \end{array} \right] \in \mathbb{R}^{K \times F}.$$ 
+    
+    \textbf{Step 7:} Obtain \( \mathbf{X}_{\text{mod}}\in\mathbb{R}^{K\times F} \) as  $\mathbf{X}_{\text{mod}} = \mathbf{G} + \mathbf{X}_{\text{narrow}}.$\\
+    \textbf{Step 8:} Compute log-magnitude of CQT from \(x_{\text{wide}}(n)\) as $\mathbf{X}_{\text{wide}} \in \mathbb{R}^{K \times F}$ with the same parameters as in Step 2. 
+\end{algorithm}
+
+\begin{figure*}[t] 
+\vspace{0cm}
+    \centering
+    \includegraphics[width=\textwidth, height=0.9\textheight, keepaspectratio]{PLOTS/Testing_ISPA_2.png}
+    \caption{\textcolor{black}{Process flow summarizing the test pipeline comprising upsampling, CQT feature extraction, magnitude estimation, magnitude combination, phase recovery, and iCQT reconstruction of the time domain waveform.}}
+    \label{fig:block_diagram_test}
+\vspace{-4mm}
+\end{figure*}
+
+\subsection{CQT-Based Feature Extraction and Data Generation}\label{feature_Extraction}
+Algorithm~\ref{algo_cqtFeatureExtraction} together with Fig.~\ref{fig:block_diagram_training} \textcolor{black}{describe} the feature extraction routine. The WB speech waveform \(x_{\text{wide}}(n)\), sampled at \(f_{s}=16\;\text{kHz}\), is routed through a Butterworth low-pass filter of order \(N=50\). This large order yields the sharp cutoff illustrated in Fig.~\ref{fig:block_diagram_training}, showing the NB speech signal. The filtered NB waveform \(x_{\text{narrow}}(n)\) lacks the high-frequency content needed for improved speech quality. CQTs are therefore computed with bounds \(f_{\min}\) and \(f_{\max}\) that delimit the analysis band and with \(B\) bins per octave, as detailed in Algorithm~\ref{algo_cqtFeatureExtraction}. First, the log-magnitude CQT \(\mathbf{X}_{\text{narrow}}\in\mathbb{R}^{K\times F}\) is obtained for the filtered waveform \(x_{\text{narrow}}(n)\), as specified in Step 2 of Algorithm~\ref{algo_cqtFeatureExtraction}. The dimension \(K\) equals the number of frequency bins determined by \(f_{\min}\), \(f_{\max}\), and \(B\), whereas \(F\) denotes the total frame count. The upper spectrum of \(x_{\text{narrow}}(n)\) is virtually empty, leaving the signal short of high-frequency detail. Consequently, Step 3 computes an additional CQT matrix \(\mathbf{X}'_{\text{narrow}}\in\mathbb{R}^{K'\times F}\) with revised limits: \(f'_{\min}=f_{\min}\) and \(f'_{\max}\ll f_{\max}\). Next we take the upper \(L\) bins of \(\mathbf{X}'_{\text{narrow}}\) that lie closest to \(f'_{\max}\) and stack them into \textcolor{black}{$\mathbf{J}\in\mathbb{R}^{L\times F}$}, as illustrated in Step~4.  In the following step, \(\mathbf{J}\) is stacked \(P\) times along the frequency axis to form the mask \(\mathbf{M}\in\mathbb{R}^{B\times F}\). A sweep over several \(L\) settings showed that \(L=1\) gives the highest performance and outperforms the variant without stacking. Steps 6 and 7 construct \(\mathbf{G}\in\mathbb{R}^{K\times F}\) by inserting the mask \(\mathbf{M}\) into the upper \(B\) rows, then overwrite the last \(B\) frequency bins of \(\mathbf{X}_{\text{narrow}}\) by computing \(\mathbf{X}_{\text{mod}} = \mathbf{G} + \mathbf{X}_{\text{narrow}}\). This fills the nearly empty high-frequency bins of the original matrix and yields the modified CQT representation \(\mathbf{X}_{\text{mod}}\in\mathbb{R}^{K\times F}\). In the supervised setup, the target matrix \(\mathbf{X}_{\text{wide}}\in\mathbb{R}^{K\times F}\) is produced by applying the same CQT settings from Step 2 to the WB waveform \(x_{\text{wide}}(n)\). Therefore, each training pair consists of \(\mathbf{X}_{\text{mod}}\) as the input and \(\mathbf{X}_{\text{wide}}\) as the label, which is later used to train the MLP introduced in Section~\ref{network}.
+
+
+
+\subsection{Model Architecture}\label{network}
+As illustrated in Fig.~\ref{fig:block_diagram_test}, the model adopts a three-layer MLP architecture. It ingests a 336-dimensional feature vector, equal to the CQT bin count \(K\). Two hidden layers with 512 and 256 units, respectively, employ ReLU activations, and a final linear layer restores the original CQT dimensionality. The network contains roughly \(0.39\,\text{M}\) trainable parameters.
+
+Training uses the Adam optimizer with a learning rate of \(0.001\), minimizing the Mean Squared Error (MSE) while recording Mean Absolute Error (MAE) as an auxiliary metric. The model is trained for 50 epochs with a batch size of 64, and a dedicated validation set monitors generalization.
+
+
+\subsection{Speech Signal Reconstruction} \label{reconstruction}
+
+To regenerate the speech waveform from the network’s CQT output, the required phase is first recovered via spectral folding \textcolor{black}{\cite{inproceedings5}}, \textcolor{black}{wherein the NB signal is mirrored above 4 kHz to approximate the missing high-frequency phase}, as depicted in Fig.~\ref{fig:block_diagram_test}. A subsequent CQT on the folded spectrum provides the phase factor \(e^{j(\angle\mathbf{X}_{\text{sf}})}\). Combining this phase with the magnitude matrix \(\mathbf{Y}_{\text{wide}}\in\mathbb{R}^{K\times F}\) yields the complex matrix \(\hat{\mathbf{Y}}_{\text{wide}}\in\mathbb{C}^{K\times F}\). The iCQT then maps this representation back to the time domain, producing the reconstructed WB signal \(y_{\text{wide}}(n)\).
+
+\begin{figure*}[t] 
+\vspace{-0mm}
+    \centering
+    \includegraphics[width=\textwidth, height=0.23\textwidth]{PLOTS/Spectrogram_L0_HP.png}
+    \vspace{-4mm}
+    \caption{Spectrograms of speech signals showing \text{(a)} NB, \text{(b)} original WB, \text{(c)} MLP$_{\text{CQT}}$, \text{(d)} MLP$_{\text{STFT}}$, \text{(e)} GMM$_{\text{CQT}}$, and \text{(f)} GMM$_{\text{STFT}}$.}
+    \label{fig:spectrograms}
+\vspace{-4mm}
+\end{figure*}
+
+\section{Experimental Evaluation}
+
+This work employs the TIMIT corpus~\cite{garofolo1993timit} to train and evaluate the ABE system. The database contains \(6{,}300\) phonetically rich utterances produced by \(630\) speakers spanning several U.S.\ dialect regions, recorded at \(16\,\text{kHz}\) with a gender split of \(70\%\) male and \(30\%\) female. For our experiments, \(4{,}392\) files are used for training, \(228\) for validation, and \(1{,}680\) for testing. \textcolor{black}{For evaluation, each NB signal is upsampled from \(8\,\text{kHz}\) to \(16\,\text{kHz}\) and passed through a low-pass filter, as illustrated in Fig.~\ref{fig:block_diagram_test}.} Two CQTs are then computed and concatenated into \textcolor{black}{\(\mathbf{X}_{\text{mod}}\)}, which forms the model input described in Section~\ref{feature_Extraction}. \textcolor{black}{The network outputs a WB magnitude estimate \(\mathbf{X}'_{\text{wide}}\). We refine this estimate by substituting its first \(K-B\) bins with the matching bins from \(\mathbf{X}_{\text{narrow}}\), thereby forming the combined inverse log-magnitude \(\mathbf{Y}_{\text{wide}}\). The final WB waveform is reconstructed according to the method in Section~\ref{reconstruction}.}
+
+\subsection{Objective Evaluation}
+
+
+
+For the objective assessment, we adopted three widely used ABE indicators: (a) Log Spectral Distance (LSD) \textcolor{black}{\cite{266414}}, (b) Visual Geometry Group (VGG) distance \textcolor{black}{\cite{VGGdist}}, and (c) Virtual Speech Quality Objective Listener (ViSQOL) \textcolor{black}{\cite{chinen2020visqolv}}. LSD quantifies spectral divergence between signals. The VGG distance leverages a pre-trained VGG-16 network \cite{DBLP:journals/corr/SimonyanZ14a} to derive high-level representations from the reference and reconstructed WB speech, then applies the Euclidean ($\ell_2$) norm to gauge perceptual disparity. \textcolor{black}{Further details on the preprocessing required to compute the VGG distance can be found in \cite{VGGdist}.} ViSQOL constitutes a perception-oriented objective score that contrasts reference and test waveforms through an auditory model, yielding estimates that correlate strongly with human judgments of speech quality. \textcolor{black}{In addition, we measure processing efficiency with the real-time factor (RTF), defined as the total inference time on the test set divided by the sum of its audio duration.} Table~\ref{tab:metrics} presents the full set of results for the evaluated ABE systems. To isolate the impact of the modelling approach while keeping an identical spectral analysis stage, we also include a baseline that couples GMMs with CQT features, as described in~\cite{7953218}. Furthermore, both the MLP and GMM models were trained and tested using the standard STFT representation, labelled MLP\textsubscript{STFT}~\cite{DBLP:conf/icspis/BiswasNK24} and GMM\textsubscript{STFT}, to investigate how the feature domain influences ABE performance. The STFT is computed with \(n_{\text{fft}} = 670\) and a hop-length of \(n_{\text{fft}}/2\), producing \(336\) spectral bins, equal to the CQT bin count \(K\). This choice keeps the number of trainable parameters and the frequency dimension comparable across models. Comparisons with GANs or other elaborate architectures are excluded, since the study targets lightweight designs suitable for real-time deployment.
+
+The results highlight the lead of MLP\textsubscript{CQT}, which posts the best scores with an LSD of \(1.00\)\,dB, a VGG distance of \(2.45\), and a ViSQOL rating of \(4.52\). These values verify that the proposed system reliably elevates the quality of bandwidth-extended speech. Both MLP and GMM models achieve stronger results with CQT than with STFT inputs, underscoring CQT’s ability to encode critical speech components. \textcolor{black}{ MLP\textsubscript{CQT} runs well below 0.11 RTF, confirming real-time‐capable operation, while the GMM variants exhibit much higher RTFs.} The uniform gains across different modelling approaches underline the inherent merits of integrating CQT into a DNN framework for ABE.
+
+
+
+\subsection{Subjective Evaluation}
+
+\begin{table}[t]
+\centering
+\caption{Objective metrics comparison of MLP and GMM models employing CQT and STFT features, alongside NB results.}
+\label{tab:metrics}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lccccc} 
+\toprule
+\textbf{Method} & \textbf{LSD ($dB$) ↓} & \textbf{VGG distance ↓} & \textbf{ViSQOL ↑} & \textbf{RTF ↓} & \textbf{Para. ($M$)} \\
+\midrule
+NB                              & 1.83                   & 3.45                     & 4.27             & –        & –             \\
+GMM\textsubscript{STFT}         & 1.35                   & 3.09                     & 3.50             & 2.557    & 0.46          \\
+GMM\textsubscript{CQT} \cite{7953218}     & 1.24                   & 2.71                     & 4.12             & 1.956    & 0.46          \\
+MLP\textsubscript{STFT} \cite{DBLP:conf/icspis/BiswasNK24} & 1.16                   & 2.74                     & 4.20             & 0.134    & \textbf{0.39} \\
+MLP\textsubscript{CQT}          & \textbf{1.00}          & \textbf{2.45}            & \textbf{4.52}    & \textbf{0.104} & \textbf{0.39} \\
+\bottomrule
+\end{tabular}%
+}
+\vspace{-4mm}
+\end{table}
+
+Perceptual quality was evaluated through subjective listening tests conducted under the MUSHRA paradigm \cite{Schoeffler-2018}. Thirteen stimulus sets were prepared, each containing the NB signal, the original WB recording, and WB reconstructions produced by the competing methods. \textcolor{black}{Ten} native German listeners with English as their second language scored the material, treating the ground-truth WB sample as the reference (score \(=100\)). The remaining stimuli within each set were presented in random, unidentified order, and after hearing all samples the listeners assigned ratings from 0 to 100. Each set consisted of six utterances with identical speech content but differing signal quality. Randomized playback minimized bias in the comparisons. \textcolor{black}{Listener ages ranged from 16 to 64, providing variability within the panel.} Figure~\ref{fig:MUSHRA} reports the average listener scores, with MLP\textsubscript{CQT} reaching an impressive mean of \(90.19\%\) and clearly surpassing the NB signal as well as all other approaches. This outcome shows that MLP\textsubscript{CQT} delivers higher perceptual quality than its counterparts, in agreement with the objective metrics. In contrast, the STFT-based methods were judged inferior to the NB signal, contradicting the objective ranking. The spectrograms in Fig.~\ref{fig:spectrograms} provide additional evidence of the method’s effectiveness. As visible in Fig.~\ref{fig:spectrograms} (c), MLP\textsubscript{CQT} reproduces the harmonic structure of the speech signal more accurately than GMM\textsubscript{STFT} or MLP\textsubscript{STFT}.
+
+\begin{figure}
+
+    \centering
+    \includegraphics[width=1\linewidth,height=0.5\linewidth]{PLOTS/MUSHRA_ISPA2025.png}
+    \vspace{-3mm}
+    \caption{\textcolor{black}{Mean MUSHRA scores ($\%$) across the evaluated ABE techniques.}}
+    \label{fig:MUSHRA}
+\vspace{-3mm}
+\end{figure}
+\vspace {+2mm}
+\section{Conclusion}
+
+
+This study introduced a lightweight yet effective framework for artificial bandwidth extension (ABE) by leveraging the constant-Q Transform (CQT) for spectral feature extraction and a simple Multi-Layer Perceptron (MLP) for high-frequency magnitude estimation. Our experiments demonstrate that the proposed MLP\textsubscript{CQT} method achieves significant improvements over both GMM- and STFT-based approaches in terms of objective metrics and subjective evaluations. By aligning the frequency resolution with human auditory perception more closely, CQT facilitates a more efficient representation of speech harmonics and contributes to high-fidelity reconstruction of wideband signals. Additionally, the proposed system maintains a relatively small model size, which makes it suitable for real-time applications. Future work will focus on phase estimation, exploring alternative lightweight architectures to further enhance performance, and extending the approach to handle varying input sampling rates.
+
+%\section{Acknowledgement}
+%This work was partially supported by the German Academic Exchange Service (DAAD).
+
+
+\bibliographystyle{IEEEtran}
+\bibliography{mybiblography.bib}
+
+\end{document}
